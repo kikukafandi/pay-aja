@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package payaja;
+
+option go_package = "./pb";
+
+/*
+ *  Wallet Service Definitions
+ */
+service WalletService {
+    /*
+     * Description  : Get the balance of a user's wallet
+     * Request      : GetBalanceRequest
+     * Response     : GetBalanceResponse
+     */
+    rpc GetBalance (GetBalanceRequest) returns (GetBalanceResponse);
+}
+
+message GetBalanceRequest {
+    string user_id = 1;
+}
+
+message GetBalanceResponse {
+    string user_id = 1;
+    int64  balance = 2;
+    string currency = 3;
+}

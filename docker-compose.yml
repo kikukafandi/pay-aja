@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: wallet_postgres
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: wallet_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: wallet_pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres
+
+  wallet-service:
+    container_name: wallet_app
+    build:
+      context: .
+      dockerfile: wallet-service/Dockerfile
+    ports:
+      - "50051:50051"
+    depends_on:
+      - postgres
+    environment:
+      - DB_HOST=wallet_postgres
+      - DB_USER=user
+      - DB_PASSWORD=password
+      - DB_NAME=wallet_db
+      - DB_PORT=5432
+
+volumes:
+  postgres_data:
