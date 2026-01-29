@@ -16,24 +16,19 @@ import (
 	"gorm.io/gorm"
 )
 
-// Wallet represents the user's wallet entity stored in the database.
 type Wallet struct {
 	ID      uint   `gorm:"primaryKey"`
 	UserID  string `gorm:"uniqueIndex;not null"`
 	Balance int64  `gorm:"default:0"`
 }
 
-// server provides the implementation of the WalletServiceServer.
 type server struct {
 	pb.UnimplementedWalletServiceServer
 	db *gorm.DB
 }
 
-// GetBalance retrieves the balance for a specific user.
-// If the user does not exist, a new wallet is initialized with a balance of 0.
 func (s *server) GetBalance(ctx context.Context, req *pb.GetBalanceRequest) (*pb.GetBalanceResponse, error) {
 	var wallet Wallet
-
 	result := s.db.Where("user_id = ?", req.GetUserId()).First(&wallet)
 
 	if result.Error != nil {
@@ -57,8 +52,6 @@ func (s *server) GetBalance(ctx context.Context, req *pb.GetBalanceRequest) (*pb
 	}, nil
 }
 
-// TopUp increases the balance of a specific user.
-// It returns an error if the amount is invalid or the user is not found.
 func (s *server) TopUp(ctx context.Context, req *pb.TopUpRequest) (*pb.TopUpResponse, error) {
 	if req.GetAmount() <= 0 {
 		return nil, status.Errorf(codes.InvalidArgument, "amount must be positive")
@@ -69,18 +62,72 @@ func (s *server) TopUp(ctx context.Context, req *pb.TopUpRequest) (*pb.TopUpResp
 		if err == gorm.ErrRecordNotFound {
 			return nil, status.Errorf(codes.NotFound, "user not found")
 		}
-		return nil, status.Errorf(codes.Internal, "database query error: %v", err)
+		return nil, status.Errorf(codes.Internal, "query error: %v", err)
 	}
 
 	wallet.Balance += req.GetAmount()
 	if err := s.db.Save(&wallet).Error; err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to update balance: %v", err)
+		return nil, status.Errorf(codes.Internal, "failed to save balance: %v", err)
 	}
 
 	return &pb.TopUpResponse{
 		UserId:  wallet.UserID,
 		Balance: wallet.Balance,
 		Status:  "SUCCESS",
+	}, nil
+}
+
+func (s *server) Transfer(ctx context.Context, req *pb.TransferRequest) (*pb.TransferResponse, error) {
+	if req.GetAmount() <= 0 {
+		return nil, status.Errorf(codes.InvalidArgument, "amount must be positive")
+	}
+	if req.GetFromUserId() == req.GetToUserId() {
+		return nil, status.Errorf(codes.InvalidArgument, "cannot transfer to self")
+	}
+
+	tx := s.db.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+
+	var fromWallet Wallet
+	if err := tx.Where("user_id = ?", req.GetFromUserId()).First(&fromWallet).Error; err != nil {
+		tx.Rollback()
+		return nil, status.Errorf(codes.NotFound, "sender not found")
+	}
+
+	if fromWallet.Balance < req.GetAmount() {
+		tx.Rollback()
+		return nil, status.Errorf(codes.FailedPrecondition, "insufficient balance")
+	}
+
+	var toWallet Wallet
+	if err := tx.Where("user_id = ?", req.GetToUserId()).First(&toWallet).Error; err != nil {
+		tx.Rollback()
+		return nil, status.Errorf(codes.NotFound, "receiver not found")
+	}
+
+	fromWallet.Balance -= req.GetAmount()
+	if err := tx.Save(&fromWallet).Error; err != nil {
+		tx.Rollback()
+		return nil, status.Errorf(codes.Internal, "failed to update sender balance")
+	}
+
+	toWallet.Balance += req.GetAmount()
+	if err := tx.Save(&toWallet).Error; err != nil {
+		tx.Rollback()
+		return nil, status.Errorf(codes.Internal, "failed to update receiver balance")
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		return nil, status.Errorf(codes.Internal, "transaction commit failed")
+	}
+
+	return &pb.TransferResponse{
+		Status:        "SUCCESS",
+		TransactionId: fmt.Sprintf("%s-to-%s", req.GetFromUserId(), req.GetToUserId()),
 	}, nil
 }
 
@@ -96,23 +143,23 @@ func main() {
 
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
-		log.Fatalf("failed to connect to database: %v", err)
+		log.Fatalf("failed to connect database: %v", err)
 	}
 
 	if err := db.AutoMigrate(&Wallet{}); err != nil {
-		log.Fatalf("failed to migrate database: %v", err)
+		log.Fatalf("failed to migrate: %v", err)
 	}
 
 	lis, err := net.Listen("tcp", ":50051")
 	if err != nil {
-		log.Fatalf("failed to listen on port 50051: %v", err)
+		log.Fatalf("failed to listen: %v", err)
 	}
 
 	s := grpc.NewServer()
 	pb.RegisterWalletServiceServer(s, &server{db: db})
 
-	log.Printf("Wallet Service is running on :50051")
+	log.Printf("Wallet Service running on :50051")
 	if err := s.Serve(lis); err != nil {
-		log.Fatalf("failed to serve gRPC: %v", err)
+		log.Fatalf("failed to serve: %v", err)
 	}
 }

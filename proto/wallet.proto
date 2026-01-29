@@ -4,13 +4,14 @@ package payaja;
 
 option go_package = "./pb";
 
-// --- SERVICE BARU ---
+// WalletService defines the gRPC service for wallet operations.
 service WalletService {
-    // 
+    // GetBalance retrieves the current balance of a user's wallet.
     rpc GetBalance (GetBalanceRequest) returns (GetBalanceResponse);
-    
-    // --- FITUR BARU ---
+    // TopUp adds funds to a user's wallet.
     rpc TopUp (TopUpRequest) returns (TopUpResponse);
+    // Transfer moves funds from one user's wallet to another.
+    rpc Transfer (TransferRequest) returns (TransferResponse);
 }
 
 message GetBalanceRequest {
@@ -23,14 +24,24 @@ message GetBalanceResponse {
     string currency = 3;
 }
 
-// --- MESSAGE BARU ---
 message TopUpRequest {
     string user_id = 1;
-    int64  amount  = 2; 
+    int64  amount  = 2;
 }
 
 message TopUpResponse {
     string user_id = 1;
-    int64  balance = 2; 
-    string status  = 3; 
+    int64  balance = 2;
+    string status  = 3;
+}
+
+message TransferRequest {
+    string from_user_id = 1;
+    string to_user_id   = 2;
+    int64  amount       = 3;
+}
+
+message TransferResponse {
+    string status = 1;
+    string transaction_id = 2;
 }

@@ -125,7 +125,6 @@ func (x *GetBalanceResponse) GetCurrency() string {
 	return ""
 }
 
-// --- MESSAGE BARU ---
 type TopUpRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
@@ -238,6 +237,118 @@ func (x *TopUpResponse) GetStatus() string {
 	return ""
 }
 
+type TransferRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	FromUserId    string                 `protobuf:"bytes,1,opt,name=from_user_id,json=fromUserId,proto3" json:"from_user_id,omitempty"`
+	ToUserId      string                 `protobuf:"bytes,2,opt,name=to_user_id,json=toUserId,proto3" json:"to_user_id,omitempty"`
+	Amount        int64                  `protobuf:"varint,3,opt,name=amount,proto3" json:"amount,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *TransferRequest) Reset() {
+	*x = TransferRequest{}
+	mi := &file_proto_wallet_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TransferRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TransferRequest) ProtoMessage() {}
+
+func (x *TransferRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_wallet_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TransferRequest.ProtoReflect.Descriptor instead.
+func (*TransferRequest) Descriptor() ([]byte, []int) {
+	return file_proto_wallet_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *TransferRequest) GetFromUserId() string {
+	if x != nil {
+		return x.FromUserId
+	}
+	return ""
+}
+
+func (x *TransferRequest) GetToUserId() string {
+	if x != nil {
+		return x.ToUserId
+	}
+	return ""
+}
+
+func (x *TransferRequest) GetAmount() int64 {
+	if x != nil {
+		return x.Amount
+	}
+	return 0
+}
+
+type TransferResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Status        string                 `protobuf:"bytes,1,opt,name=status,proto3" json:"status,omitempty"`
+	TransactionId string                 `protobuf:"bytes,2,opt,name=transaction_id,json=transactionId,proto3" json:"transaction_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *TransferResponse) Reset() {
+	*x = TransferResponse{}
+	mi := &file_proto_wallet_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TransferResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TransferResponse) ProtoMessage() {}
+
+func (x *TransferResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_wallet_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TransferResponse.ProtoReflect.Descriptor instead.
+func (*TransferResponse) Descriptor() ([]byte, []int) {
+	return file_proto_wallet_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *TransferResponse) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *TransferResponse) GetTransactionId() string {
+	if x != nil {
+		return x.TransactionId
+	}
+	return ""
+}
+
 var File_proto_wallet_proto protoreflect.FileDescriptor
 
 const file_proto_wallet_proto_rawDesc = "" +
@@ -255,11 +366,21 @@ const file_proto_wallet_proto_rawDesc = "" +
 	"\rTopUpResponse\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x18\n" +
 	"\abalance\x18\x02 \x01(\x03R\abalance\x12\x16\n" +
-	"\x06status\x18\x03 \x01(\tR\x06status2\x8a\x01\n" +
+	"\x06status\x18\x03 \x01(\tR\x06status\"i\n" +
+	"\x0fTransferRequest\x12 \n" +
+	"\ffrom_user_id\x18\x01 \x01(\tR\n" +
+	"fromUserId\x12\x1c\n" +
+	"\n" +
+	"to_user_id\x18\x02 \x01(\tR\btoUserId\x12\x16\n" +
+	"\x06amount\x18\x03 \x01(\x03R\x06amount\"Q\n" +
+	"\x10TransferResponse\x12\x16\n" +
+	"\x06status\x18\x01 \x01(\tR\x06status\x12%\n" +
+	"\x0etransaction_id\x18\x02 \x01(\tR\rtransactionId2\xc9\x01\n" +
 	"\rWalletService\x12C\n" +
 	"\n" +
 	"GetBalance\x12\x19.payaja.GetBalanceRequest\x1a\x1a.payaja.GetBalanceResponse\x124\n" +
-	"\x05TopUp\x12\x14.payaja.TopUpRequest\x1a\x15.payaja.TopUpResponseB\x06Z\x04./pbb\x06proto3"
+	"\x05TopUp\x12\x14.payaja.TopUpRequest\x1a\x15.payaja.TopUpResponse\x12=\n" +
+	"\bTransfer\x12\x17.payaja.TransferRequest\x1a\x18.payaja.TransferResponseB\x06Z\x04./pbb\x06proto3"
 
 var (
 	file_proto_wallet_proto_rawDescOnce sync.Once
@@ -273,20 +394,24 @@ func file_proto_wallet_proto_rawDescGZIP() []byte {
 	return file_proto_wallet_proto_rawDescData
 }
 
-var file_proto_wallet_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_proto_wallet_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
 var file_proto_wallet_proto_goTypes = []any{
 	(*GetBalanceRequest)(nil),  // 0: payaja.GetBalanceRequest
 	(*GetBalanceResponse)(nil), // 1: payaja.GetBalanceResponse
 	(*TopUpRequest)(nil),       // 2: payaja.TopUpRequest
 	(*TopUpResponse)(nil),      // 3: payaja.TopUpResponse
+	(*TransferRequest)(nil),    // 4: payaja.TransferRequest
+	(*TransferResponse)(nil),   // 5: payaja.TransferResponse
 }
 var file_proto_wallet_proto_depIdxs = []int32{
 	0, // 0: payaja.WalletService.GetBalance:input_type -> payaja.GetBalanceRequest
 	2, // 1: payaja.WalletService.TopUp:input_type -> payaja.TopUpRequest
-	1, // 2: payaja.WalletService.GetBalance:output_type -> payaja.GetBalanceResponse
-	3, // 3: payaja.WalletService.TopUp:output_type -> payaja.TopUpResponse
-	2, // [2:4] is the sub-list for method output_type
-	0, // [0:2] is the sub-list for method input_type
+	4, // 2: payaja.WalletService.Transfer:input_type -> payaja.TransferRequest
+	1, // 3: payaja.WalletService.GetBalance:output_type -> payaja.GetBalanceResponse
+	3, // 4: payaja.WalletService.TopUp:output_type -> payaja.TopUpResponse
+	5, // 5: payaja.WalletService.Transfer:output_type -> payaja.TransferResponse
+	3, // [3:6] is the sub-list for method output_type
+	0, // [0:3] is the sub-list for method input_type
 	0, // [0:0] is the sub-list for extension type_name
 	0, // [0:0] is the sub-list for extension extendee
 	0, // [0:0] is the sub-list for field type_name
@@ -303,7 +428,7 @@ func file_proto_wallet_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_wallet_proto_rawDesc), len(file_proto_wallet_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   4,
+			NumMessages:   6,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

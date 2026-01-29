@@ -21,17 +21,21 @@ const _ = grpc.SupportPackageIsVersion9
 const (
 	WalletService_GetBalance_FullMethodName = "/payaja.WalletService/GetBalance"
 	WalletService_TopUp_FullMethodName      = "/payaja.WalletService/TopUp"
+	WalletService_Transfer_FullMethodName   = "/payaja.WalletService/Transfer"
 )
 
 // WalletServiceClient is the client API for WalletService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 //
-// --- SERVICE BARU ---
+// WalletService defines the gRPC service for wallet operations.
 type WalletServiceClient interface {
+	// GetBalance retrieves the current balance of a user's wallet.
 	GetBalance(ctx context.Context, in *GetBalanceRequest, opts ...grpc.CallOption) (*GetBalanceResponse, error)
-	// --- FITUR BARU ---
+	// TopUp adds funds to a user's wallet.
 	TopUp(ctx context.Context, in *TopUpRequest, opts ...grpc.CallOption) (*TopUpResponse, error)
+	// Transfer moves funds from one user's wallet to another.
+	Transfer(ctx context.Context, in *TransferRequest, opts ...grpc.CallOption) (*TransferResponse, error)
 }
 
 type walletServiceClient struct {
@@ -62,15 +66,28 @@ func (c *walletServiceClient) TopUp(ctx context.Context, in *TopUpRequest, opts 
 	return out, nil
 }
 
+func (c *walletServiceClient) Transfer(ctx context.Context, in *TransferRequest, opts ...grpc.CallOption) (*TransferResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(TransferResponse)
+	err := c.cc.Invoke(ctx, WalletService_Transfer_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // WalletServiceServer is the server API for WalletService service.
 // All implementations must embed UnimplementedWalletServiceServer
 // for forward compatibility.
 //
-// --- SERVICE BARU ---
+// WalletService defines the gRPC service for wallet operations.
 type WalletServiceServer interface {
+	// GetBalance retrieves the current balance of a user's wallet.
 	GetBalance(context.Context, *GetBalanceRequest) (*GetBalanceResponse, error)
-	// --- FITUR BARU ---
+	// TopUp adds funds to a user's wallet.
 	TopUp(context.Context, *TopUpRequest) (*TopUpResponse, error)
+	// Transfer moves funds from one user's wallet to another.
+	Transfer(context.Context, *TransferRequest) (*TransferResponse, error)
 	mustEmbedUnimplementedWalletServiceServer()
 }
 
@@ -86,6 +103,9 @@ func (UnimplementedWalletServiceServer) GetBalance(context.Context, *GetBalanceR
 }
 func (UnimplementedWalletServiceServer) TopUp(context.Context, *TopUpRequest) (*TopUpResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method TopUp not implemented")
+}
+func (UnimplementedWalletServiceServer) Transfer(context.Context, *TransferRequest) (*TransferResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method Transfer not implemented")
 }
 func (UnimplementedWalletServiceServer) mustEmbedUnimplementedWalletServiceServer() {}
 func (UnimplementedWalletServiceServer) testEmbeddedByValue()                       {}
@@ -144,6 +164,24 @@ func _WalletService_TopUp_Handler(srv interface{}, ctx context.Context, dec func
 	return interceptor(ctx, in, info, handler)
 }
 
+func _WalletService_Transfer_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(TransferRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(WalletServiceServer).Transfer(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: WalletService_Transfer_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(WalletServiceServer).Transfer(ctx, req.(*TransferRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // WalletService_ServiceDesc is the grpc.ServiceDesc for WalletService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -158,6 +196,10 @@ var WalletService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "TopUp",
 			Handler:    _WalletService_TopUp_Handler,
+		},
+		{
+			MethodName: "Transfer",
+			Handler:    _WalletService_Transfer_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
