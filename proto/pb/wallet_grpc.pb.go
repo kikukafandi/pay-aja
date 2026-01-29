@@ -20,18 +20,18 @@ const _ = grpc.SupportPackageIsVersion9
 
 const (
 	WalletService_GetBalance_FullMethodName = "/payaja.WalletService/GetBalance"
+	WalletService_TopUp_FullMethodName      = "/payaja.WalletService/TopUp"
 )
 
 // WalletServiceClient is the client API for WalletService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 //
-//	Wallet Service Definitions
+// --- SERVICE BARU ---
 type WalletServiceClient interface {
-	// Description  : Get the balance of a user's wallet
-	// Request      : GetBalanceRequest
-	// Response     : GetBalanceResponse
 	GetBalance(ctx context.Context, in *GetBalanceRequest, opts ...grpc.CallOption) (*GetBalanceResponse, error)
+	// --- FITUR BARU ---
+	TopUp(ctx context.Context, in *TopUpRequest, opts ...grpc.CallOption) (*TopUpResponse, error)
 }
 
 type walletServiceClient struct {
@@ -52,16 +52,25 @@ func (c *walletServiceClient) GetBalance(ctx context.Context, in *GetBalanceRequ
 	return out, nil
 }
 
+func (c *walletServiceClient) TopUp(ctx context.Context, in *TopUpRequest, opts ...grpc.CallOption) (*TopUpResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(TopUpResponse)
+	err := c.cc.Invoke(ctx, WalletService_TopUp_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // WalletServiceServer is the server API for WalletService service.
 // All implementations must embed UnimplementedWalletServiceServer
 // for forward compatibility.
 //
-//	Wallet Service Definitions
+// --- SERVICE BARU ---
 type WalletServiceServer interface {
-	// Description  : Get the balance of a user's wallet
-	// Request      : GetBalanceRequest
-	// Response     : GetBalanceResponse
 	GetBalance(context.Context, *GetBalanceRequest) (*GetBalanceResponse, error)
+	// --- FITUR BARU ---
+	TopUp(context.Context, *TopUpRequest) (*TopUpResponse, error)
 	mustEmbedUnimplementedWalletServiceServer()
 }
 
@@ -74,6 +83,9 @@ type UnimplementedWalletServiceServer struct{}
 
 func (UnimplementedWalletServiceServer) GetBalance(context.Context, *GetBalanceRequest) (*GetBalanceResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetBalance not implemented")
+}
+func (UnimplementedWalletServiceServer) TopUp(context.Context, *TopUpRequest) (*TopUpResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method TopUp not implemented")
 }
 func (UnimplementedWalletServiceServer) mustEmbedUnimplementedWalletServiceServer() {}
 func (UnimplementedWalletServiceServer) testEmbeddedByValue()                       {}
@@ -114,6 +126,24 @@ func _WalletService_GetBalance_Handler(srv interface{}, ctx context.Context, dec
 	return interceptor(ctx, in, info, handler)
 }
 
+func _WalletService_TopUp_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(TopUpRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(WalletServiceServer).TopUp(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: WalletService_TopUp_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(WalletServiceServer).TopUp(ctx, req.(*TopUpRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // WalletService_ServiceDesc is the grpc.ServiceDesc for WalletService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -124,6 +154,10 @@ var WalletService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetBalance",
 			Handler:    _WalletService_GetBalance_Handler,
+		},
+		{
+			MethodName: "TopUp",
+			Handler:    _WalletService_TopUp_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
