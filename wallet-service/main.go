@@ -6,6 +6,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"time" // Jangan lupa import time
 
 	pb "pay-aja/proto/pb"
 
@@ -14,6 +15,7 @@ import (
 	"google.golang.org/grpc/status"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type Wallet struct {
@@ -58,16 +60,30 @@ func (s *server) TopUp(ctx context.Context, req *pb.TopUpRequest) (*pb.TopUpResp
 	}
 
 	var wallet Wallet
-	if err := s.db.Where("user_id = ?", req.GetUserId()).First(&wallet).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
-			return nil, status.Errorf(codes.NotFound, "user not found")
-		}
-		return nil, status.Errorf(codes.Internal, "query error: %v", err)
-	}
 
-	wallet.Balance += req.GetAmount()
-	if err := s.db.Save(&wallet).Error; err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to save balance: %v", err)
+	// Transaction Block dengan Locking
+	err := s.db.Transaction(func(tx *gorm.DB) error {
+		// 🔒 LOCKING: "FOR UPDATE"
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+			Where("user_id = ?", req.GetUserId()).
+			First(&wallet).Error; err != nil {
+
+			if err == gorm.ErrRecordNotFound {
+				return status.Errorf(codes.NotFound, "user not found")
+			}
+			return err
+		}
+
+		wallet.Balance += req.GetAmount()
+
+		if err := tx.Save(&wallet).Error; err != nil {
+			return err
+		}
+		return nil
+	})
+
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "transaction failed: %v", err)
 	}
 
 	return &pb.TopUpResponse{
@@ -85,44 +101,41 @@ func (s *server) Transfer(ctx context.Context, req *pb.TransferRequest) (*pb.Tra
 		return nil, status.Errorf(codes.InvalidArgument, "cannot transfer to self")
 	}
 
-	tx := s.db.Begin()
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
+	err := s.db.Transaction(func(tx *gorm.DB) error {
+		var fromWallet Wallet
+		// 🔒 Lock Pengirim
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+			Where("user_id = ?", req.GetFromUserId()).
+			First(&fromWallet).Error; err != nil {
+			return status.Errorf(codes.NotFound, "sender not found")
 		}
-	}()
 
-	var fromWallet Wallet
-	if err := tx.Where("user_id = ?", req.GetFromUserId()).First(&fromWallet).Error; err != nil {
-		tx.Rollback()
-		return nil, status.Errorf(codes.NotFound, "sender not found")
-	}
+		if fromWallet.Balance < req.GetAmount() {
+			return status.Errorf(codes.FailedPrecondition, "insufficient balance")
+		}
 
-	if fromWallet.Balance < req.GetAmount() {
-		tx.Rollback()
-		return nil, status.Errorf(codes.FailedPrecondition, "insufficient balance")
-	}
+		var toWallet Wallet
+		// 🔒 Lock Penerima
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+			Where("user_id = ?", req.GetToUserId()).
+			First(&toWallet).Error; err != nil {
+			return status.Errorf(codes.NotFound, "receiver not found")
+		}
 
-	var toWallet Wallet
-	if err := tx.Where("user_id = ?", req.GetToUserId()).First(&toWallet).Error; err != nil {
-		tx.Rollback()
-		return nil, status.Errorf(codes.NotFound, "receiver not found")
-	}
+		fromWallet.Balance -= req.GetAmount()
+		toWallet.Balance += req.GetAmount()
 
-	fromWallet.Balance -= req.GetAmount()
-	if err := tx.Save(&fromWallet).Error; err != nil {
-		tx.Rollback()
-		return nil, status.Errorf(codes.Internal, "failed to update sender balance")
-	}
+		if err := tx.Save(&fromWallet).Error; err != nil {
+			return err
+		}
+		if err := tx.Save(&toWallet).Error; err != nil {
+			return err
+		}
+		return nil
+	})
 
-	toWallet.Balance += req.GetAmount()
-	if err := tx.Save(&toWallet).Error; err != nil {
-		tx.Rollback()
-		return nil, status.Errorf(codes.Internal, "failed to update receiver balance")
-	}
-
-	if err := tx.Commit().Error; err != nil {
-		return nil, status.Errorf(codes.Internal, "transaction commit failed")
+	if err != nil {
+		return nil, err
 	}
 
 	return &pb.TransferResponse{
@@ -145,6 +158,24 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to connect database: %v", err)
 	}
+
+	// --- CONFIG CONNECTION POOL ---
+	sqlDB, err := db.DB()
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	// SetMaxIdleConns sets the maximum number of connections in the idle connection pool.
+	sqlDB.SetMaxIdleConns(10)
+
+	// SetMaxOpenConns sets the maximum number of open connections to the database.
+	// Postgres default limit is 100. Kita set 50 biar aman.
+	// Sisanya akan ANTRI di aplikasi Go, bukan ditolak DB.
+	sqlDB.SetMaxOpenConns(50)
+
+	// SetConnMaxLifetime sets the maximum amount of time a connection may be reused.
+	sqlDB.SetConnMaxLifetime(time.Hour)
+	// ------------------------------
 
 	if err := db.AutoMigrate(&Wallet{}); err != nil {
 		log.Fatalf("failed to migrate: %v", err)
