@@ -1,0 +1,146 @@
+basePath: /
+definitions:
+  main.BalanceResponse:
+    properties:
+      balance:
+        example: 1000000
+        type: integer
+      currency:
+        example: IDR
+        type: string
+      user_id:
+        example: sultan-1
+        type: string
+    type: object
+  main.ErrorResponse:
+    properties:
+      error:
+        example: user not found
+        type: string
+    type: object
+  main.StatusResponse:
+    properties:
+      balance:
+        example: 1000000
+        type: integer
+      status:
+        example: SUCCESS
+        type: string
+      transaction_id:
+        example: txn-123
+        type: string
+    type: object
+  main.TopUpInput:
+    properties:
+      amount:
+        example: 100000
+        type: integer
+      user_id:
+        example: sultan-1
+        type: string
+    type: object
+  main.TransferInput:
+    properties:
+      amount:
+        example: 50000
+        type: integer
+      from_user:
+        example: sultan-1
+        type: string
+      to_user:
+        example: rakyat-1
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: API Gateway untuk layanan E-Wallet (gRPC Backend).
+  title: PayAja Wallet API
+  version: "1.0"
+paths:
+  /balance/{user_id}:
+    get:
+      consumes:
+      - application/json
+      description: Mengambil saldo user.
+      parameters:
+      - description: User ID
+        in: path
+        name: user_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.BalanceResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+      summary: Cek Saldo
+      tags:
+      - Wallet
+  /topup:
+    post:
+      consumes:
+      - application/json
+      description: Menambah saldo user.
+      parameters:
+      - description: Data Top Up
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/main.TopUpInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.StatusResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+      summary: Top Up Saldo
+      tags:
+      - Wallet
+  /transfer:
+    post:
+      consumes:
+      - application/json
+      description: Transfer saldo antar user.
+      parameters:
+      - description: Data Transfer
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/main.TransferInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.StatusResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+      summary: Transfer Uang
+      tags:
+      - Wallet
+swagger: "2.0"
